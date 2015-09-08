@@ -450,7 +450,7 @@ function _commonmark_discover_extensions() {
           // Find the first available and valid CommonMark extension class.
           if (class_exists($class) && ($implementations = class_implements($class))) {
             foreach ($extension_types as $interface => $method) {
-              if (in_array('Drupal\CommonMark\ExtensionInterface', $implementations) && in_array($interface, $implementations)) {
+              if (in_array($interface, $implementations)) {
                 $info['class'] = $class;
                 $info['method'] = $method;
                 $info['type'] = preg_replace('/^add/', '', $method);

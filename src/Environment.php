@@ -58,11 +58,14 @@ class Environment extends \League\CommonMark\Environment {
         // Instantiate the extension.
         $extension_instance = $class->newInstanceArgs($args);
 
-        // Set the extension's default settings.
-        $extension_instance->setSettings($extension['default settings']);
+        // If this is a Drupal\CommonMark\Extension, load in the settings.
+        if (in_array('Drupal\CommonMark\ExtensionInterface', class_implements($extension['class']))) {
+          // Set the extension's default settings.
+          $extension_instance->setSettings($extension['default settings']);
 
-        // Set the extension's current settings.
-        $extension_instance->setSettings($extension['settings']);
+          // Set the extension's current settings.
+          $extension_instance->setSettings($extension['settings']);
+        }
 
         // Replace the placeholder for the extension instance in the method
         // arguments with the real class instance.
