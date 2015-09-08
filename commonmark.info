@@ -1,5 +1,8 @@
 name = CommonMark
 description = Converts Markdown to HTML based on the CommonMark spec via thephpleague/commonmark PHP library, created and maintained by The League of Extraordinary Packages.
-core = 7.x
 
-dependencies[] = composer_manager
+core = 7.x
+package = CommonMark
+php = 5.4.8
+
+configure = admin/config/content/commonmark
