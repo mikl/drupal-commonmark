@@ -6,3 +6,5 @@ package = CommonMark
 php = 5.4.8
 
 configure = admin/config/content/commonmark
+
+registry_autoload[] = PSR-4
