@@ -59,8 +59,11 @@ class HashAutolinker extends Extension implements InlineParserInterface {
     $title = FALSE;
 
     $type = $this->getSetting('type');
-    if ($type === 'node' && is_numeric($text) && ($node = node_load($text))) {
-      $url = url("node/$node->nid", ['absolute' => TRUE]);
+    if ($type === 'node' && is_numeric($text) && ($node = \Drupal::entityManager()->getStorage('node')->load($text))) {
+      // @FIXME
+// url() expects a route name or an external URI.
+// $url = url("node/$node->nid", ['absolute' => TRUE]);
+
       if ($this->getSetting('node_title') && !empty($node->title)) {
         $text = $node->title;
       }
@@ -100,9 +103,17 @@ class HashAutolinker extends Extension implements InlineParserInterface {
    *   The URL title or FALSE if it could not be retrieved.
    */
   protected function getUrlTitle($url) {
-    $request = drupal_http_request($url);
+    // @FIXME
+// drupal_http_request() has been replaced by the Guzzle HTTP client, which is bundled
+// with Drupal core.
+// 
+// 
+// @see https://www.drupal.org/node/1862446
+// @see http://docs.guzzlephp.org/en/latest
+// $request = drupal_http_request($url);
+
     if (!isset($request->error) && isset($request->data) && preg_match("/<title>(.*)<\\/title>/siU", $request->data, $matches)) {
-      return check_plain(trim(preg_replace('/\s+/', ' ', $matches[1])));
+      return \Drupal\Component\Utility\SafeMarkup::checkPlain(trim(preg_replace('/\s+/', ' ', $matches[1])));
     }
     return FALSE;
   }

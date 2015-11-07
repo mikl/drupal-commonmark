@@ -3,54 +3,6 @@
  * @file
  * Contains filter integration for CommonMark.
  */
-
-/**
- * Returns the list of incompatible filters.
- *
- * @return array
- *   A list of incompatible filters.
- */
-function _commonmark_incompatible_filters() {
-  return [
-    'filter_autop',
-    'filter_html',
-    'filter_html_escape',
-    'filter_url',
-  ];
-}
-
-/**
- * Implements hook_form_FORM_ID_alter().
- */
-function commonmark_form_filter_admin_format_form_alter(&$form, &$form_state, $form_id) {
-  $form['#attached']['js'][] = drupal_get_path('module', 'commonmark') . '/js/filter.admin.js';
-  $form['filters']['status']['commonmark']['#description'] = t('Some filters are not compatible with or implement the same functionality already provided by the CommonMark filter. They will be forcefully disabled. To re-enable any of these filters, you must first disable the CommonMark filter.');
-  foreach (_commonmark_incompatible_filters() as $name) {
-    $element = &$form['filters']['status'][$name];
-    $element['#states']['disabled'][':input[name="filters[commonmark][status]"]'] = array('checked' => TRUE);
-    $element['#states']['checked'][':input[name="filters[commonmark][status]"]'] = array('checked' => FALSE);
-  }
-}
-
-/**
- * Implements hook_filter_info().
- */
-function commonmark_filter_info() {
-  $filters['commonmark'] = [
-    'title' => t('CommonMark'),
-    'process callback' => '_commonmark_filter_process',
-    'settings callback' => '_commonmark_filter_settings',
-    'default settings' => [
-      'allowed_tags' => '<a> <abbr> <address> <blockquote> <br> <cite> <code> <dd> <del> <div> <dl> <dt> <em> <h1> <h2> <h3> <h4> <h5> <h6> <hr> <img> <kbd> <li> <ol> <p> <pre> <small> <span> <strong> <sub> <sup> <table> <tbody> <td> <tfoot> <th> <thead> <tr> <ul>',
-      'show_examples' => 1,
-      'use_global_settings' => 1,
-    ],
-    'tips callback' => '_commonmark_filter_tips',
-    'weight' => -20,
-  ];
-  return $filters;
-}
-
 /**
  * Implements callback_filter_tips().
  *
@@ -60,18 +12,18 @@ function _commonmark_filter_tips($filter, $format, $long = FALSE) {
   // On the "short" tooltips, we can simply call the build array normally.
   if (!$long) {
     $build = _commonmark_filter_tips_build(array(), array(), $filter, $format, $long);
-    return drupal_render($build);
+    return \Drupal::service("renderer")->render($build);
   }
 
   // On the long format, the render array must be retrieved as a "form" due to
   // the fact that vertical tabs require form processing to work properly.
-  $build = drupal_get_form('_commonmark_filter_tips_build', $filter, $format, $long);
+  $build = \Drupal::formBuilder()->getForm('_commonmark_filter_tips_build', $filter, $format, $long);
 
   // Since we're essentially "hacking" the FAPI and this isn't an actual "form",
   // remove everything that isn't needed to prevent anyone from actually using
   // our custom form and possibly "submitting" it.
   unset($build['form_build_id'], $build['form_id'], $build['form_token']);
-  $children = element_children($build);
+  $children = \Drupal\Core\Render\Element::children($build);
   foreach (array_keys($build) as $key) {
     if (!in_array($key, $children)) {
       unset($build[$key]);
@@ -79,7 +31,7 @@ function _commonmark_filter_tips($filter, $format, $long = FALSE) {
   }
 
   // Render the build array.
-  return drupal_render($build);
+  return \Drupal::service("renderer")->render($build);
 }
 
 /**
@@ -264,8 +216,18 @@ function _commonmark_filter_tips_build(array $form, array $form_state, $filter, 
   ];
 
   // Links
-  $site_name = variable_get('site_name', 'Drupal');
-  $site_mail = variable_get('site_mail', ini_get('sendmail_from'));
+  // @FIXME
+// // @FIXME
+// // This looks like another module's variable. You'll need to rewrite this call
+// // to ensure that it uses the correct configuration object.
+// $site_name = variable_get('site_name', 'Drupal');
+
+  // @FIXME
+// // @FIXME
+// // This looks like another module's variable. You'll need to rewrite this call
+// // to ensure that it uses the correct configuration object.
+// $site_mail = variable_get('site_mail', ini_get('sendmail_from'));
+
   $groups['links']['items'][] = [
     'title' => t('Links'),
     'tags' => [
@@ -329,7 +291,7 @@ function _commonmark_filter_tips_build(array $form, array $form_state, $filter, 
   $format_clone = $format;
   $long_clone = $long;
   foreach (commonmark_get_extensions($filter) as $extension) {
-    if (module_hook($extension['module'], 'commonmark_extension_tips')) {
+    if (\Drupal::moduleHandler()->implementsHook($extension['module'], 'commonmark_extension_tips')) {
       $function = $extension['module'] . '_commonmark_extension_tips';
       if (function_exists($function)) {
         $function($extension, $groups, $build, $filter_clone, $format_clone, $long_clone);
@@ -339,7 +301,7 @@ function _commonmark_filter_tips_build(array $form, array $form_state, $filter, 
 
   // Iterate over all the items.
   $converter = commonmark_get_converter($filter);
-  $header = [check_plain($format->name) . ' / ' . t('HTML Output'), t('Rendered')];
+  $header = [\Drupal\Component\Utility\SafeMarkup::checkPlain($format->name) . ' / ' . t('HTML Output'), t('Rendered')];
   foreach ($groups as $group_name => $group) {
     // Build the group.
     $build['groups'][$group_name] = [
@@ -415,7 +377,7 @@ function _commonmark_filter_tips_build(array $form, array $form_state, $filter, 
           }
 
           $row[] = [
-            'data' => '<pre><code class="language-markdown show-whitespace">' . check_plain($markdown) . '</code></pre><hr/><pre><code class="language-html show-whitespace">' . trim(check_plain($rendered)) . '</code></pre>',
+            'data' => '<pre><code class="language-markdown show-whitespace">' . \Drupal\Component\Utility\SafeMarkup::checkPlain($markdown) . '</code></pre><hr/><pre><code class="language-html show-whitespace">' . trim(\Drupal\Component\Utility\SafeMarkup::checkPlain($rendered)) . '</code></pre>',
             'style' => 'padding-right: 2em; vertical-align: middle; width: 66.666%',
           ];
           $row[] = [
@@ -437,8 +399,8 @@ function _commonmark_filter_tips_build(array $form, array $form_state, $filter, 
   }
 
   // Remove empty groups.
-  foreach (element_children($build['groups']) as $child) {
-    if (!element_children($build['groups'][$child])) {
+  foreach (\Drupal\Core\Render\Element::children($build['groups']) as $child) {
+    if (!\Drupal\Core\Render\Element::children($build['groups'][$child])) {
       unset($build['groups'][$child]);
     }
   }
@@ -470,7 +432,7 @@ function _commonmark_filter_tips_build(array $form, array $form_state, $filter, 
   foreach ($entities as $entity => $description) {
     $rows[] = [
       $description,
-      '<code>' . check_plain($entity) . '</code>',
+      '<code>' . \Drupal\Component\Utility\SafeMarkup::checkPlain($entity) . '</code>',
       $entity,
     ];
   }

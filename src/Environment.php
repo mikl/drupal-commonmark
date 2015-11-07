@@ -82,7 +82,7 @@ class Environment extends \League\CommonMark\Environment {
         call_user_func_array([$this, $extension['method']], $method_args);
       }
       catch (\Exception $e) {
-        watchdog('commonmark', $e->getMessage());
+        \Drupal::logger('commonmark')->notice($e->getMessage(), []);
       }
     }
   }

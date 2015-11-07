@@ -94,17 +94,20 @@ function commonmark_extension_settings_form(array $element, array &$form_state, 
   $default_value = isset($form_state['values']['enabled']) ? $form_state['values']['enabled'] : [];
   foreach (commonmark_get_extensions($filter, $form_state, FALSE) as $extension) {
     // Construct the tableselect option.
-    $options[$extension['name']] = [
-      'title' => !empty($extension['url']) ? l($extension['title'], $extension['url'], ['attributes' => ['target' => '_blank']]) : $extension['title'],
-      'description' => !empty($extension['description']) ? $extension['description'] : '',
-      'type' => $extension['type'],
-    ];
+    // @FIXME
+// l() expects a Url object, created from a route name or external URI.
+// $options[$extension['name']] = [
+//       'title' => !empty($extension['url']) ? l($extension['title'], $extension['url'], ['attributes' => ['target' => '_blank']]) : $extension['title'],
+//       'description' => !empty($extension['description']) ? $extension['description'] : '',
+//       'type' => $extension['type'],
+//     ];
+
 
     if (!isset($default_value[$extension['name']])) {
       $default_value[$extension['name']] = (int) $extension['enabled'];
     }
 
-    if (module_hook($extension['module'], 'commonmark_extension_settings')) {
+    if (\Drupal::moduleHandler()->implementsHook($extension['module'], 'commonmark_extension_settings')) {
       $element['commonmark_extensions']['settings'][$extension['name']] = [
         '#type' => 'fieldset',
         '#title' => t('@extension Settings', array(
@@ -143,7 +146,7 @@ function commonmark_extension_settings_form(array $element, array &$form_state, 
  */
 function commonmark_extension_settings_form_submit(array $form, array &$form_state) {
   // Remove unnecessary values.
-  form_state_values_clean($form_state);
+  $form_state->cleanValues();
 
   // Reference the values.
   $values = &$form_state['values'];
@@ -166,15 +169,24 @@ function commonmark_extension_settings_form_submit(array $form, array &$form_sta
         }
       }
       if ($disabled) {
-        drupal_set_message(t('The following filters are incompatible with or is functionality already provided by the CommonMark filter and will be forcefully disabled. To re-enable any of these filters, you must first disable the CommonMark filter. !filters', [
-          '!filters' => theme('item_list', ['items' => $disabled]),
-        ]), 'warning');
+        // @FIXME
+// theme() has been renamed to _theme() and should NEVER be called directly.
+// Calling _theme() directly can alter the expected output and potentially
+// introduce security issues (see https://www.drupal.org/node/2195739). You
+// should use renderable arrays instead.
+// 
+// 
+// @see https://www.drupal.org/node/2195739
+// drupal_set_message(t('The following filters are incompatible with or is functionality already provided by the CommonMark filter and will be forcefully disabled. To re-enable any of these filters, you must first disable the CommonMark filter. !filters', [
+//           '!filters' => theme('item_list', ['items' => $disabled]),
+//         ]), 'warning');
+
       }
     }
   }
 
   // Handle extension specific settings.
-  $values = &drupal_array_get_nested_value($form_state['values'], _commonmark_get_form_parents($filter), $exists);
+  $values = &\Drupal\Component\Utility\NestedArray::getValue($form_state['values'], _commonmark_get_form_parents($filter), $exists);
   if ($exists) {
     // Convert extension enabled statuses to integers.
     if (!empty($values['enabled'])) {
@@ -253,13 +265,13 @@ function commonmark_extension_info() {
     $cid = 'commonmark:extensions';
 
     // Attempt to load cached extensions data.
-    if (($cache = cache_get($cid)) && isset($cache->data)) {
+    if (($cache = \Drupal::cache()->get($cid)) && isset($cache->data)) {
       $extensions = $cache->data;
     }
     // Otherwise, discover all installed CommonMark extensions.
     else {
       $extensions = _commonmark_discover_extensions();
-      cache_set($cid, $extensions);
+      \Drupal::cache()->set($cid, $extensions);
     }
   }
 
@@ -334,13 +346,17 @@ function commonmark_get_extensions($filter = NULL, array $form_state = array(), 
   $extensions = commonmark_extension_info();
 
   // Restore saved global settings.
-  $global = variable_get('commonmark_extensions', []);
+  // @FIXME
+// Could not extract the default value because it is either indeterminate, or
+// not scalar. You'll need to provide a default value in
+// config/install/commonmark.settings.yml and config/schema/commonmark.schema.yml.
+$global = \Drupal::config('commonmark.settings')->get('commonmark_extensions');
   foreach (array_keys($extensions) as $name) {
     if (isset($global['enabled'][$name])) {
       $extensions[$name]['enabled'] = !!$global['enabled'][$name];
     }
     if (isset($global['settings'][$name])) {
-      $extensions[$name]['settings'] = drupal_array_merge_deep($extensions[$name]['settings'], $global['settings'][$name]);
+      $extensions[$name]['settings'] = \Drupal\Component\Utility\NestedArray::mergeDeep($extensions[$name]['settings'], $global['settings'][$name]);
     }
   }
 
@@ -349,13 +365,13 @@ function commonmark_get_extensions($filter = NULL, array $form_state = array(), 
     foreach ($extensions as &$extension) {
       $extension['enabled'] = !!$filter->settings['commonmark_extensions']['enabled'][$extension['name']];
       $extension['original settings'] = $extension['settings'];
-      $extension['settings'] = drupal_array_merge_deep($extension['settings'], $filter->settings['commonmark_extensions']['settings'][$extension['name']]);
+      $extension['settings'] = \Drupal\Component\Utility\NestedArray::mergeDeep($extension['settings'], $filter->settings['commonmark_extensions']['settings'][$extension['name']]);
     }
   }
 
   // Merge in form state values.
   if (!empty($form_state['values'])) {
-    $values = &drupal_array_get_nested_value($form_state['values'], _commonmark_get_form_parents($filter), $exists);
+    $values = &\Drupal\Component\Utility\NestedArray::getValue($form_state['values'], _commonmark_get_form_parents($filter), $exists);
     if (!empty($values['enabled'])) {
       foreach ($values['enabled'] as $name => $value) {
         if (isset($extensions[$name])) {
@@ -366,7 +382,7 @@ function commonmark_get_extensions($filter = NULL, array $form_state = array(), 
     if (!empty($values['settings'])) {
       foreach ($values['settings'] as $name => $settings) {
         if (isset($extensions[$name])) {
-          $extensions[$name]['settings'] = drupal_array_merge_deep($extensions[$name]['settings'], $settings);
+          $extensions[$name]['settings'] = \Drupal\Component\Utility\NestedArray::mergeDeep($extensions[$name]['settings'], $settings);
         }
       }
     }
@@ -400,7 +416,7 @@ function commonmark_get_library_path($vendor, $package, $absolute = TRUE) {
 
   // Search directories (similar to libraries_get_libraries() implementation).
   $directories = [
-    conf_path() . '/libraries',
+    \Drupal\Core\DrupalKernel::findSitePath() . '/libraries',
     drupal_get_path('profile', drupal_get_profile()) . '/libraries',
     'sites/all/libraries',
     'libraries',
@@ -429,7 +445,7 @@ function commonmark_get_library_path($vendor, $package, $absolute = TRUE) {
   }
 
   // Return the path, absolute if necessary.
-  return $path && $absolute ? DRUPAL_ROOT . base_path() . $path : $path;
+  return $path && $absolute ? \Drupal::root() . base_path() . $path : $path;
 }
 
 /******************************************************************************
@@ -464,8 +480,8 @@ function _commonmark_discover_extensions() {
   ];
 
   $hook = 'commonmark_extension_info';
-  foreach (module_implements($hook) as $module) {
-    $results = module_invoke($module, $hook);
+  foreach (\Drupal::moduleHandler()->getImplementations($hook) as $module) {
+    $results = \Drupal::moduleHandler()->invoke($module, $hook);
     // Iterate over each hook info definition and verify that it contains
     // a valid CommonMark extension.
     foreach ($results as $name => $info) {
@@ -521,7 +537,7 @@ function _commonmark_discover_extensions() {
   }
 
   // Allow modules to alter the extensions.
-  drupal_alter($hook, $extensions);
+  \Drupal::moduleHandler()->alter($hook, $extensions);
 
   return $extensions;
 }

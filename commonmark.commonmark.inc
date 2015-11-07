@@ -180,7 +180,7 @@ function commonmark_commonmark_extension_settings(array $extension, array $eleme
  */
 function commonmark_commonmark_extension_tips(array $extension, array &$groups, array &$build, $filter, $format, $long) {
   global $base_url;
-  global $user;
+  $user = \Drupal::currentUser();
 
   // @codingStandardsIgnoreStart Ignore coding standards during this section
   // of code. Concatenated t() strings are ok here.
@@ -188,7 +188,7 @@ function commonmark_commonmark_extension_tips(array $extension, array &$groups, 
     case 'at_autolinker':
       if ($extension['settings']['type'] === 'user') {
         if (!$user || !$user->uid) {
-          $user = user_load(1);
+          $user = \Drupal::entityManager()->getStorage('user')->load(1);
         }
         $description = [t('Text that starts with an at symbol (@) followed by any character other than a space will be automatically linked to users on this site.')];
         if ($extension['settings']['format_username']) {
@@ -257,7 +257,7 @@ function commonmark_commonmark_extension_tips(array $extension, array &$groups, 
       // Only show this description if there are multiple host names.
       if (count($hosts) > 1) {
         foreach ($hosts as &$host) {
-          $host = '<code>' . check_plain($host) . '</code>';
+          $host = '<code>' . \Drupal\Component\Utility\SafeMarkup::checkPlain($host) . '</code>';
         }
         $groups['links']['items'][0]['description'][] = '<p>' . t('Links with the following URL host names will be treated as "internal" links: !hosts.', [
           '!hosts' => implode(', ', $hosts),
@@ -265,7 +265,12 @@ function commonmark_commonmark_extension_tips(array $extension, array &$groups, 
       }
 
       // Manual implementations.
-      $site_name = variable_get('site_name', 'Drupal');
+      // @FIXME
+// // @FIXME
+// // This looks like another module's variable. You'll need to rewrite this call
+// // to ensure that it uses the correct configuration object.
+// $site_name = variable_get('site_name', 'Drupal');
+
       $groups['links']['items'][] = [
         'title' => t('Manual links (using raw HTML)'),
         'description' => t('The above examples are only for links using the Markdown syntax. Manually defined links using raw HTML are always processed "as is". You will be responsible for adding all attributes and values. Suffice it to say, it is always best to avoid using raw HTML and instead use the Markdown syntax whenever possible.'),

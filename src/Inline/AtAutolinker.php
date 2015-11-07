@@ -62,10 +62,13 @@ class AtAutolinker extends Extension implements InlineParserInterface {
     if ($type === 'user') {
       $user = user_load_by_name($text);
       if ((!$user || !$user->uid) && is_numeric($text)) {
-        $user = user_load((int) $text);
+        $user = \Drupal::entityManager()->getStorage('user')->load((int) $text);
       }
       if ($user && $user->uid) {
-        $url = url("user/$user->uid", ['absolute' => TRUE]);
+        // @FIXME
+// url() expects a route name or an external URI.
+// $url = url("user/$user->uid", ['absolute' => TRUE]);
+
         $title = t('View user profile.');
         if ($this->getSetting('format_username')) {
           $text = format_username($user);
