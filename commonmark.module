@@ -7,8 +7,6 @@
 use Drupal\CommonMark\Converter;
 use Drupal\CommonMark\Environment;
 
-include_once 'commonmark.filter.inc';
-
 /******************************************************************************
  * Hooks.
  *****************************************************************************/
@@ -36,30 +34,6 @@ function commonmark_menu() {
     'access arguments' => ['administer site configuration'],
   ];
   return $items;
-}
-
-/**
- * Implements hook_registry_autoload_registry_alter().
- */
-function commonmark_registry_autoload_registry_alter(array &$registry) {
-  if (($library_path = commonmark_get_library_path('thephpleague', 'commonmark', FALSE)) && file_exists("$library_path/src")) {
-    $autoload_searcher = new RegistryAutoloadSearcher(registry_get_parsed_files());
-    $module = (object) db_select('system', 's')->fields('s')->condition('name', 'commonmark')->execute()->fetchAssoc();
-    $class_files = $autoload_searcher->findClassFiles("$library_path/src", 'PSR-4/absolute');
-    $registry = array_merge($registry, $autoload_searcher->processFiles($class_files, $module));
-  }
-}
-
-/**
- * Implements hook_xautoload().
- */
-function commonmark_xautoload($adapter) {
-  /** @var \Drupal\xautoload\Adapter\LocalDirectoryAdapter $adapter */
-  $adapter->composerJson('composer.json');
-
-  if (($library_path = commonmark_get_library_path('thephpleague', 'commonmark')) && file_exists("$library_path/composer.json")) {
-    $adapter->absolute()->composerJson("$library_path/composer.json");
-  }
 }
 
 /******************************************************************************

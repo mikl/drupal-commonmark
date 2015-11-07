@@ -52,68 +52,6 @@ function commonmark_filter_info() {
 }
 
 /**
- * Implements callback_filter_process().
- */
-function _commonmark_filter_process($text, $filter, $format, $langcode, $cache, $cache_id) {
-  // Convert to HTML.
-  $text = commonmark_convert_to_html($text, $filter);
-
-  // Filter anything not in the allowed tags.
-  if ($allowed_tags = preg_split('/\s+|<|>/', $filter->settings['allowed_tags'], -1, PREG_SPLIT_NO_EMPTY)) {
-    $text = filter_xss($text, $allowed_tags);
-  }
-
-  return trim($text);
-}
-
-/**
- * Implements callback_filter_settings().
- */
-function _commonmark_filter_settings(&$form, &$form_state, $filter, $format, $defaults) {
-  $filter->settings += $defaults;
-  $form_state['#filter'] = $filter;
-
-  $settings['allowed_tags'] = [
-    '#type' => 'textfield',
-    '#title' => t('Allowed HTML tags'),
-    '#default_value' => $filter->settings['allowed_tags'],
-    '#maxlength' => 1024,
-    '#description' => t('<p>A list of HTML tags that will be permitted to remain after CommonMark has converted the Markdown to HTML. JavaScript event attributes, JavaScript URLs, and CSS are always stripped.</p><p><strong>WARNING: Modifying this list will have a severe impact on the final output from CommonMark, use with caution.</strong></p>'),
-  ];
-
-  $settings['show_examples'] = [
-    '#type' => 'checkbox',
-    '#title' => t('Show examples in the "long" filter tips.'),
-    '#default_value' => $filter->settings['show_examples'],
-  ];
-
-  $settings['use_global_settings'] = [
-    '#type' => 'checkbox',
-    '#title' => t('Use global CommonMark settings'),
-    '#description' => t('Uses existing global setting set in the <a href="!config">CommonMark administrative configuration</a> area.', [
-      '!config' => url('admin/config/content/commonmark'),
-    ]),
-    '#default_value' => $filter->settings['use_global_settings'],
-  ];
-
-  // Add extension settings overrides to the filter settings.
-  $settings = commonmark_extension_settings_form($settings, $form_state, $form);
-  $settings['commonmark_extensions']['#states'] = [
-    'invisible' => [
-      ':input[name="filters[commonmark][settings][use_global_settings]"]' => ['checked' => TRUE],
-    ],
-  ];
-
-  // Because the admin filter form doesn't explicitly set it's submit callback,
-  // by adding our own, we have inadvertently canceled it. Add it back in.
-  if (isset($form['#submit']) && !in_array('filter_admin_format_form_submit', $form['#submit'])) {
-    $form['#submit'][] = 'filter_admin_format_form_submit';
-  }
-
-  return $settings;
-}
-
-/**
  * Implements callback_filter_tips().
  *
  * @see _commonmark_filter_tips_build()
