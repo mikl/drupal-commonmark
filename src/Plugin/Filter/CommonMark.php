@@ -44,7 +44,7 @@ class CommonMark extends FilterBase {
    */
   public function process($text, $langcode) {
     // Convert to HTML.
-    $html = commonmark_convert_to_html($text, $filter);
+    $html = commonmark_convert_to_html($text);
 
     return new FilterProcessResult($html);
   }
