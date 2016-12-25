@@ -1,6 +1,7 @@
 {
   "name": "drupal/commonmark",
-  "license": "GPL+2",
+  "license": "GPL-2.0+",
+  "type": "drupal-module",
   "authors": [
     {
       "name": "Mark Carver",
